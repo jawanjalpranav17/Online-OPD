@@ -1,6 +1,6 @@
 import connectDB from "../../../lib/db";
 import User from "../../../models/User";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { serialize } from "cookie"; // Use named import
 
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ message: "Method not allowed" });
     }
 
-    const { username, password } = req.body;
+    const { username, password, expectedRole } = req.body;
     if (!username || !password) {
         return res.status(400).json({ message: "Missing fields" });
     }
@@ -28,15 +28,23 @@ export default async function handler(req, res) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
+        const role = user.role || "staff";
+        if (expectedRole === "patient" && role !== "patient") {
+            return res.status(403).json({ message: "This login is for patients. Use Staff Sign In instead." });
+        }
+        if (expectedRole === "staff" && role === "patient") {
+            return res.status(403).json({ message: "This login is for hospital staff. Use Patient Sign In instead." });
+        }
+
         if (!JWT_SECRET) {
             return res.status(500).json({
                 message:
-                    "Server misconfiguration: JWT_SECRET is not set. Add it in Vercel Environment Variables.",
+                    "Server misconfiguration: JWT_SECRET is not set. Add it in Render (or Vercel) Environment Variables.",
             });
         }
 
         const token = jwt.sign(
-            { id: user._id, username: user.username, isAdmin: user.isAdmin },
+            { id: user._id, username: user.username, isAdmin: user.isAdmin, role: user.role || "staff", patientId: user.patientId || null },
             JWT_SECRET,
             { expiresIn: "1h" }
         );
@@ -52,7 +60,7 @@ export default async function handler(req, res) {
             })
         );
 
-        return res.status(200).json({ message: "Sign in successful", isAdmin: user.isAdmin });
+        return res.status(200).json({ message: "Sign in successful", isAdmin: user.isAdmin, role: user.role || "staff", patientId: user.patientId || null });
     } catch (error) {
         console.error("[api/auth/signin]", error);
         const msg = error?.message || "Sign in failed";
@@ -60,7 +68,7 @@ export default async function handler(req, res) {
         if (isConfig) {
             return res.status(500).json({
                 message:
-                    "Server misconfiguration: database URL is not set. Add MONGO_URI or MONGODB_URI in Vercel Environment Variables.",
+                    "Server misconfiguration: database URL is not set. Add MONGO_URI or MONGODB_URI in Render (or Vercel) Environment Variables.",
             });
         }
         if (/querySrv|ENOTFOUND|getaddrinfo|ECONNREFUSED|ETIMEDOUT/i.test(msg)) {
@@ -69,7 +77,7 @@ export default async function handler(req, res) {
             );
             return res.status(503).json({
                 message: dnsLikely
-                    ? "Database hostname does not resolve (DNS error). Replace MONGO_URI with the current mongodb+srv string from Atlas → Database → Connect → Drivers, update Vercel env, redeploy. IP allowlist 0.0.0.0/0 cannot fix a wrong or deleted cluster hostname."
+                    ? "Database hostname does not resolve (DNS error). Replace MONGO_URI with the current mongodb+srv string from Atlas → Database → Connect → Drivers, update the MONGO_URI environment variable, redeploy. IP allowlist 0.0.0.0/0 cannot fix a wrong or deleted cluster hostname."
                     : "Cannot reach the database (network/timeout). Check Atlas Network Access (0.0.0.0/0), cluster status, and MONGO_URI.",
             });
         }

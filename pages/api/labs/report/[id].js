@@ -1,5 +1,7 @@
 import connectDB from "../../../../lib/db";
 import LabOrder from "../../../../models/LabOrder";
+import LabTest from "../../../../models/LabTest";
+import Patient from "../../../../models/Patient";
 
 export default async function handler(req, res) {
     await connectDB();

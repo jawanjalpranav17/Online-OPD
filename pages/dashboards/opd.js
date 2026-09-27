@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { PlusCircle, Search, Calendar, Clock, User, ClipboardList, CheckCircle2 } from "lucide-react";
+import { PlusCircle, Search, Calendar, Clock, User, ClipboardList, CheckCircle2, X, Trash2 } from "lucide-react";
 
 export default function OPDDashboard() {
     const [appointments, setAppointments] = useState([]);
@@ -9,24 +9,30 @@ export default function OPDDashboard() {
     const [doctors, setDoctors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [showNewModal, setShowNewModal] = useState(false);
+    const [manageAppt, setManageAppt] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [formError, setFormError] = useState("");
+    const [newForm, setNewForm] = useState({ patientId: "", doctorId: "", appointmentDate: "", notes: "" });
+
+    const fetchOPDData = async () => {
+        try {
+            const [apptRes, patRes, docRes] = await Promise.all([
+                axios.get("/api/opd/appointments"),
+                axios.get("/api/patients"),
+                axios.get("/api/doctors")
+            ]);
+            setAppointments(apptRes.data);
+            setPatients(patRes.data);
+            setDoctors(docRes.data);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching OPD data:", error);
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchOPDData = async () => {
-            try {
-                const [apptRes, patRes, docRes] = await Promise.all([
-                    axios.get("/api/opd/appointments"),
-                    axios.get("/api/patients"),
-                    axios.get("/api/doctors")
-                ]);
-                setAppointments(apptRes.data);
-                setPatients(patRes.data);
-                setDoctors(docRes.data);
-                setLoading(false);
-            } catch (error) {
-                console.error("Error fetching OPD data:", error);
-                setLoading(false);
-            }
-        };
         fetchOPDData();
     }, []);
 
@@ -39,6 +45,78 @@ export default function OPDDashboard() {
             app.status?.toLowerCase().includes(query)
         );
     });
+
+    const openNewModal = () => {
+        setNewForm({ patientId: "", doctorId: "", appointmentDate: "", notes: "" });
+        setFormError("");
+        setShowNewModal(true);
+    };
+
+    const submitNewAppointment = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setFormError("");
+        try {
+            if (!newForm.patientId || !newForm.doctorId || !newForm.appointmentDate) {
+                setFormError("Patient, doctor and date are required.");
+                setSaving(false);
+                return;
+            }
+            await axios.post("/api/opd/appointments", {
+                patient: newForm.patientId,
+                doctor: newForm.doctorId,
+                appointmentDate: new Date(newForm.appointmentDate).toISOString(),
+                notes: newForm.notes
+            });
+            setShowNewModal(false);
+            await fetchOPDData();
+        } catch (error) {
+            setFormError(error.response?.data?.error || "Failed to create appointment.");
+        }
+        setSaving(false);
+    };
+
+    const openManageModal = (app) => {
+        setManageAppt({
+            _id: app._id,
+            status: app.status,
+            appointmentDate: new Date(app.appointmentDate).toISOString().slice(0, 16),
+            notes: app.notes || ""
+        });
+        setFormError("");
+    };
+
+    const submitManage = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setFormError("");
+        try {
+            await axios.put("/api/opd/appointments", {
+                _id: manageAppt._id,
+                status: manageAppt.status,
+                appointmentDate: new Date(manageAppt.appointmentDate).toISOString(),
+                notes: manageAppt.notes
+            });
+            setManageAppt(null);
+            await fetchOPDData();
+        } catch (error) {
+            setFormError(error.response?.data?.error || "Failed to update appointment.");
+        }
+        setSaving(false);
+    };
+
+    const deleteAppointment = async () => {
+        if (!manageAppt) return;
+        setSaving(true);
+        try {
+            await axios.delete(`/api/opd/appointments?_id=${manageAppt._id}`);
+            setManageAppt(null);
+            await fetchOPDData();
+        } catch (error) {
+            setFormError(error.response?.data?.error || "Failed to delete appointment.");
+        }
+        setSaving(false);
+    };
 
     return (
         <DashboardLayout title="OPD Management">
@@ -81,7 +159,10 @@ export default function OPDDashboard() {
                     />
                     <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
                 </div>
-                <button className="flex items-center justify-center px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors shadow-sm">
+                <button
+                    onClick={openNewModal}
+                    className="flex items-center justify-center px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors shadow-sm"
+                >
                     <PlusCircle className="w-5 h-5 mr-2" />
                     New Appointment
                 </button>
@@ -149,7 +230,10 @@ export default function OPDDashboard() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <button className="text-teal-600 hover:text-teal-800 font-medium text-sm transition-colors">
+                                            <button
+                                                onClick={() => openManageModal(app)}
+                                                className="text-teal-600 hover:text-teal-800 font-medium text-sm transition-colors"
+                                            >
                                                 Manage
                                             </button>
                                         </td>
@@ -160,6 +244,145 @@ export default function OPDDashboard() {
                     </table>
                 </div>
             </div>
+
+            {/* New Appointment Modal */}
+            {showNewModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowNewModal(false)}></div>
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl relative z-10 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-gray-900">New Appointment</h3>
+                            <button onClick={() => setShowNewModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 border-l-4 border-red-400 rounded text-sm">{formError}</div>}
+                        <form onSubmit={submitNewAppointment} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Patient</label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    value={newForm.patientId}
+                                    onChange={(e) => setNewForm({ ...newForm, patientId: e.target.value })}
+                                    required
+                                >
+                                    <option value="">Select patient...</option>
+                                    {patients.map(p => (
+                                        <option key={p._id} value={p._id}>{p.name} ({p.opdNumber || "No OPD"})</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    value={newForm.doctorId}
+                                    onChange={(e) => setNewForm({ ...newForm, doctorId: e.target.value })}
+                                    required
+                                >
+                                    <option value="">Select doctor...</option>
+                                    {doctors.map(d => (
+                                        <option key={d._id} value={d._id}>{d.name} - {d.department}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                                <input
+                                    type="datetime-local"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    value={newForm.appointmentDate}
+                                    onChange={(e) => setNewForm({ ...newForm, appointmentDate: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <textarea
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    rows="2"
+                                    placeholder="Optional notes..."
+                                    value={newForm.notes}
+                                    onChange={(e) => setNewForm({ ...newForm, notes: e.target.value })}
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                {saving ? "Saving..." : "Create Appointment"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Manage Appointment Modal */}
+            {manageAppt && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setManageAppt(null)}></div>
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl relative z-10 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-gray-900">Manage Appointment</h3>
+                            <button onClick={() => setManageAppt(null)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 border-l-4 border-red-400 rounded text-sm">{formError}</div>}
+                        <form onSubmit={submitManage} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    value={manageAppt.status}
+                                    onChange={(e) => setManageAppt({ ...manageAppt, status: e.target.value })}
+                                >
+                                    <option value="Scheduled">Scheduled</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Reschedule Date & Time</label>
+                                <input
+                                    type="datetime-local"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    value={manageAppt.appointmentDate}
+                                    onChange={(e) => setManageAppt({ ...manageAppt, appointmentDate: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <textarea
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    rows="2"
+                                    value={manageAppt.notes}
+                                    onChange={(e) => setManageAppt({ ...manageAppt, notes: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                                >
+                                    {saving ? "Saving..." : "Save Changes"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={deleteAppointment}
+                                    disabled={saving}
+                                    className="flex items-center justify-center px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-medium rounded-lg transition-colors disabled:opacity-50"
+                                    title="Delete appointment"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </DashboardLayout>
     );
 }

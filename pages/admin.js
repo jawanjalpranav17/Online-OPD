@@ -1,6 +1,6 @@
 // pages/admin.js
 import { verifyToken } from "../lib/auth";
-import cookie from "cookie";
+import { parse as parseCookies } from "cookie";
 
 export default function Admin({ user }) {
     if (!user || !user.isAdmin) {
@@ -23,8 +23,8 @@ export default function Admin({ user }) {
 
 export async function getServerSideProps(context) {
     const { req } = context;
-    const cookies = cookie.parse(req.headers.cookie || "");
-    const token = cookies.token || null;
+    const cookies = parseCookies(req.headers.cookie || "");
+    const token = cookies._vercel_jwt || cookies.token || null;
 
     if (!token) {
         return {

@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Navbar from '@/components/landing/Navbar';
 import Footer from '@/components/Footer';
 import Head from 'next/head';
+import { CheckCircle } from 'lucide-react';
 
 const ContactPage = () => {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // No backend for messages — open the user's mail client with the message prefilled
+    const subject = encodeURIComponent(`ClinX Demo Request from ${form.name}`);
+    const body = encodeURIComponent(`Name: ${form.name}\nEmail: ${form.email}\nPhone: ${form.phone}\n\n${form.message}`);
+    window.location.href = `mailto:support@clinx.com?subject=${subject}&body=${body}`;
+    setSubmitted(true);
+    setForm({ name: '', email: '', phone: '', message: '' });
+    setTimeout(() => setSubmitted(false), 6000);
+  };
   return (
     <div className="min-h-screen bg-white">
       <Head>
@@ -66,7 +80,13 @@ const ContactPage = () => {
             <div className="flex justify-center">
               <div className="w-full max-w-2xl px-4">
                 <div className="p-8 bg-gradient-to-br from-neutral-50 to-white rounded-3xl shadow-2xl border border-neutral-100">
-                  <form className="space-y-6">
+                  {submitted && (
+                    <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
+                      <CheckCircle className="w-6 h-6 text-emerald-600" />
+                      <p className="text-emerald-700 font-medium">Message sent! Your email client has been opened. We'll get back to you shortly.</p>
+                    </div>
+                  )}
+                  <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-neutral-700 ml-1">Full Name</label>
@@ -74,6 +94,9 @@ const ContactPage = () => {
                           type="text" 
                           placeholder="What's Your Name" 
                           className="w-full px-5 py-4 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all bg-white/50"
+                          value={form.name}
+                          onChange={(e) => setForm({ ...form, name: e.target.value })}
+                          required
                         />
                       </div>
                       <div className="space-y-2">
@@ -82,6 +105,9 @@ const ContactPage = () => {
                           type="email" 
                           placeholder="Your email address here" 
                           className="w-full px-5 py-4 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all bg-white/50"
+                          value={form.email}
+                          onChange={(e) => setForm({ ...form, email: e.target.value })}
+                          required
                         />
                       </div>
                     </div>
@@ -92,6 +118,9 @@ const ContactPage = () => {
                         type="text" 
                         placeholder="e.g. +91 98765 43210" 
                         className="w-full px-5 py-4 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all bg-white/50"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        required
                       />
                     </div>
                     
@@ -101,6 +130,9 @@ const ContactPage = () => {
                         rows="5" 
                         placeholder="Tell us about your clinic or hospital needs..." 
                         className="w-full px-5 py-4 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all bg-white/50 resize-none"
+                        value={form.message}
+                        onChange={(e) => setForm({ ...form, message: e.target.value })}
+                        required
                       ></textarea>
                     </div>
 

@@ -27,6 +27,22 @@ export default async function handler(req, res) {
         } catch (error) {
             return res.status(400).json({ error: error.message });
         }
+    } else if (req.method === "PUT") {
+        try {
+            const { _id, status, ...updates } = req.body;
+            if (!_id) return res.status(400).json({ error: "Applicant _id is required" });
+
+            const applicant = await Applicant.findByIdAndUpdate(
+                _id,
+                { status, ...updates },
+                { new: true, runValidators: true }
+            );
+            if (!applicant) return res.status(404).json({ error: "Application not found" });
+
+            return res.status(200).json(applicant);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
+        }
     } else if (req.method === "GET") {
         try {
             const { jobId, status } = req.query;

@@ -1,7 +1,7 @@
 // pages/api/auth/signup.js
 import connectDB from "@/lib/db";
 import User from "../../../models/User";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
         if (isConfig) {
             return res.status(500).json({
                 message:
-                    "Server misconfiguration: database URL is not set. Add MONGO_URI or MONGODB_URI in Vercel Environment Variables.",
+                    "Server misconfiguration: database URL is not set. Add MONGO_URI or MONGODB_URI in Render (or Vercel) Environment Variables.",
             });
         }
         if (/querySrv|ENOTFOUND|getaddrinfo|ECONNREFUSED|ETIMEDOUT/i.test(msg)) {
@@ -47,7 +47,7 @@ export default async function handler(req, res) {
             );
             return res.status(503).json({
                 message: dnsLikely
-                    ? "Database hostname does not resolve (DNS error). Your MONGO_URI points at a cluster host that no longer exists or is wrong—not fixed by IP allowlist alone. In MongoDB Atlas: Database → your live cluster → Connect → Drivers → copy the new mongodb+srv URI → set MONGO_URI on Vercel and in .env.local → Redeploy. Also keep Network Access 0.0.0.0/0 and ensure the cluster is not paused."
+                    ? "Database hostname does not resolve (DNS error). Your MONGO_URI points at a cluster host that no longer exists or is wrong—not fixed by IP allowlist alone. In MongoDB Atlas: Database → your live cluster → Connect → Drivers → copy the new mongodb+srv URI → set MONGO_URI in your hosting provider's Environment Variables and in .env.local → Redeploy. Also keep Network Access 0.0.0.0/0 and ensure the cluster is not paused."
                     : "Cannot reach the database (network/timeout). Confirm Atlas Network Access allows 0.0.0.0/0, the cluster is running, and MONGO_URI matches Atlas → Connect → Drivers.",
             });
         }

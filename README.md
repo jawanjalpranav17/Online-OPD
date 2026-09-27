@@ -80,6 +80,39 @@ Do this in the [MongoDB Atlas](https://cloud.mongodb.com) UI (it cannot be done 
    Vercel project → **Settings** → **Environment Variables** → set **`MONGO_URI`** or **`MONGODB_URI`** for **Production** (and **Preview** if you use preview URLs) → **Redeploy** the latest deployment.
 
 
+## Deploying to Render
+
+### Prerequisites
+
+1. Push this repository to GitHub (the app already includes `render.yaml`, engines, and build scripts).
+2. **MongoDB Atlas** — do the Atlas steps above first: Network Access → **Allow Access from Anywhere (`0.0.0.0/0`)** (Render's outbound IPs change, so a fixed IP list will break connections), a database user with read/write access, and the cluster **Resumed**. Copy the `mongodb+srv://...` URI from **Atlas → Connect → Drivers**.
+3. Generate a long random string for `JWT_SECRET` (e.g. run `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
+
+### Option A — Blueprint (recommended)
+
+1. Render → **New** → **Blueprint** → select the repository.
+2. Render auto-detects `render.yaml` (build `npm ci && npm run build`, start `npm run start`, health check `/`).
+3. Set `MONGO_URI` to your Atlas connection string (password included). `JWT_SECRET` is generated for you automatically.
+4. Click **Apply** and wait for the build/deploy to finish.
+
+### Option B — Manual Web Service
+
+1. Render → **New** → **Web Service** → connect the repository.
+2. Settings:
+   - Runtime: **Node** (>= 18.18)
+   - Build Command: `npm ci && npm run build`
+   - Start Command: `npm run start`
+   - Instance: Free (fine for demos)
+3. Environment → add:
+   - `MONGO_URI` = your Atlas connection string
+   - `JWT_SECRET` = a long random string (required — sign-in is disabled without it)
+4. **Deploy**. The app will be available at `https://hospital-opd.onrender.com` (or your chosen name).
+
+### After deploying
+
+- **Seed demo data (optional):** run `node scripts/seed-doctors.js` and `node scripts/seed-all-dummy-data.js` locally with the same `MONGO_URI` in `.env.local` — they write straight to the shared Atlas database, so the deployed site shows the same data.
+- **Note:** Render free instances spin down after ~15 minutes of inactivity; the first request after that takes ~1 minute to wake up.
+
 ## Contributing
 
 Contributions are welcome! Please fork the repository and create a pull request with your changes.

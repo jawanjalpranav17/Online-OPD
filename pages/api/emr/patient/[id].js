@@ -2,10 +2,16 @@ import connectDB from "../../../../lib/db";
 import Patient from "../../../../models/Patient";
 import Prescription from "../../../../models/Prescription";
 import Appointment from "../../../../models/Appointment";
+import Doctor from "../../../../models/Doctor";
+import { getSessionUser } from "../../../../lib/session";
 
 export default async function handler(req, res) {
     await connectDB();
     const { id } = req.query;
+    const sessionUser = await getSessionUser(req);
+    if (sessionUser?.role === "patient" && String(sessionUser.patientId) !== String(id)) {
+        return res.status(403).json({ error: "You can only view your own records." });
+    }
 
     if (req.method === "GET") {
         try {

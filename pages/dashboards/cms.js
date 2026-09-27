@@ -1,24 +1,33 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
-import { CopyPlus, Search, Edit, Trash2, Megaphone, CheckCircle2, XCircle } from "lucide-react";
+import { CopyPlus, Search, Edit, Trash2, Megaphone, CheckCircle2, XCircle, X } from "lucide-react";
+
+const emptyForm = { title: "", content: "", targetAudience: "Public", isActive: true, expiryDate: "" };
 
 export default function CMSDashboard() {
     const [notices, setNotices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [showModal, setShowModal] = useState(false);
+    const [editingNotice, setEditingNotice] = useState(null);
+    const [noticeForm, setNoticeForm] = useState(emptyForm);
+    const [saving, setSaving] = useState(false);
+    const [formError, setFormError] = useState("");
+    const [deletingId, setDeletingId] = useState(null);
+
+    const fetchNotices = async () => {
+        try {
+            const res = await axios.get("/api/website/notices");
+            setNotices(res.data);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching notices:", error);
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchNotices = async () => {
-            try {
-                const res = await axios.get("/api/website/notices");
-                setNotices(res.data);
-                setLoading(false);
-            } catch (error) {
-                console.error("Error fetching notices:", error);
-                setLoading(false);
-            }
-        };
         fetchNotices();
     }, []);
 
@@ -26,6 +35,68 @@ export default function CMSDashboard() {
         n.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         n.content?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const openCreateModal = () => {
+        setEditingNotice(null);
+        setNoticeForm(emptyForm);
+        setFormError("");
+        setShowModal(true);
+    };
+
+    const openEditModal = (notice) => {
+        setEditingNotice(notice);
+        setNoticeForm({
+            title: notice.title || "",
+            content: notice.content || "",
+            targetAudience: notice.targetAudience || "Public",
+            isActive: notice.isActive !== false,
+            expiryDate: notice.expiryDate ? new Date(notice.expiryDate).toISOString().slice(0, 10) : ""
+        });
+        setFormError("");
+        setShowModal(true);
+    };
+
+    const submitNotice = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setFormError("");
+        try {
+            if (!noticeForm.title || !noticeForm.content) {
+                setFormError("Title and content are required.");
+                setSaving(false);
+                return;
+            }
+            const payload = {
+                title: noticeForm.title,
+                content: noticeForm.content,
+                targetAudience: noticeForm.targetAudience,
+                isActive: noticeForm.isActive,
+                expiryDate: noticeForm.expiryDate || undefined
+            };
+            if (editingNotice) {
+                await axios.put("/api/website/notices", { _id: editingNotice._id, ...payload });
+            } else {
+                await axios.post("/api/website/notices", payload);
+            }
+            setShowModal(false);
+            await fetchNotices();
+        } catch (error) {
+            setFormError(error.response?.data?.error || "Failed to save notice.");
+        }
+        setSaving(false);
+    };
+
+    const deleteNotice = async (notice) => {
+        if (!window.confirm(`Delete notice "${notice.title}"?`)) return;
+        setDeletingId(notice._id);
+        try {
+            await axios.delete(`/api/website/notices?_id=${notice._id}`);
+            await fetchNotices();
+        } catch (error) {
+            alert(error.response?.data?.error || "Failed to delete notice.");
+        }
+        setDeletingId(null);
+    };
 
     return (
         <DashboardLayout title="Content Management System (CMS)">
@@ -40,7 +111,10 @@ export default function CMSDashboard() {
                         <p className="text-2xl font-bold text-gray-900">{notices.filter(n => n.isActive).length}</p>
                     </div>
                 </div>
-                <button className="flex items-center justify-center px-6 py-4 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition-colors shadow-md h-full self-stretch">
+                <button
+                    onClick={openCreateModal}
+                    className="flex items-center justify-center px-6 py-4 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-xl transition-colors shadow-md h-full self-stretch"
+                >
                     <CopyPlus className="w-5 h-5 mr-3" />
                     Publish New Notice
                 </button>
@@ -116,10 +190,19 @@ export default function CMSDashboard() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end space-x-2">
-                                                <button className="p-1.5 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors" title="Edit">
+                                                <button
+                                                    onClick={() => openEditModal(notice)}
+                                                    className="p-1.5 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors"
+                                                    title="Edit"
+                                                >
                                                     <Edit className="w-4 h-4" />
                                                 </button>
-                                                <button className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete">
+                                                <button
+                                                    onClick={() => deleteNotice(notice)}
+                                                    disabled={deletingId === notice._id}
+                                                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-40"
+                                                    title="Delete"
+                                                >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -131,6 +214,85 @@ export default function CMSDashboard() {
                     </table>
                 </div>
             </div>
+
+            {/* Notice Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowModal(false)}></div>
+                    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl relative z-10 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-gray-900">{editingNotice ? "Edit Notice" : "Publish New Notice"}</h3>
+                            <button onClick={() => setShowModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        {formError && <div className="mb-4 p-3 bg-red-50 text-red-700 border-l-4 border-red-400 rounded text-sm">{formError}</div>}
+                        <form onSubmit={submitNotice} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                                <input
+                                    type="text"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    value={noticeForm.title}
+                                    onChange={(e) => setNoticeForm({ ...noticeForm, title: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
+                                <textarea
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                    rows="4"
+                                    value={noticeForm.content}
+                                    onChange={(e) => setNoticeForm({ ...noticeForm, content: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>
+                                    <select
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                        value={noticeForm.targetAudience}
+                                        onChange={(e) => setNoticeForm({ ...noticeForm, targetAudience: e.target.value })}
+                                    >
+                                        <option value="Public">Public</option>
+                                        <option value="Staff">Staff</option>
+                                        <option value="Doctors">Doctors</option>
+                                        <option value="Patients">Patients</option>
+                                        <option value="All">All</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+                                    <input
+                                        type="date"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                        value={noticeForm.expiryDate}
+                                        onChange={(e) => setNoticeForm({ ...noticeForm, expiryDate: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                                <input
+                                    type="checkbox"
+                                    checked={noticeForm.isActive}
+                                    onChange={(e) => setNoticeForm({ ...noticeForm, isActive: e.target.checked })}
+                                    className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                                />
+                                <span>Active (visible on website)</span>
+                            </label>
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                {saving ? "Saving..." : editingNotice ? "Update Notice" : "Publish Notice"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
             
         </DashboardLayout>
     );

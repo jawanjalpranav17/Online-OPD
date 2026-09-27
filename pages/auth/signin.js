@@ -20,7 +20,7 @@ export default function SignIn() {
             const response = await fetch("/api/auth/signin", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form)
+                body: JSON.stringify({ ...form, expectedRole: "staff" })
             });
             
             const text = await response.text();
@@ -32,7 +32,9 @@ export default function SignIn() {
             }
 
             if (response.ok) {
-                if (data.isAdmin) {
+                if (data.role === "patient") {
+                    router.push("/patient/dashboard");
+                } else if (data.isAdmin) {
                     router.push("/admin-dashboard");
                 } else {
                     router.push("/dashboard");
@@ -41,7 +43,7 @@ export default function SignIn() {
                 setError(
                     data.message ||
                         (response.status >= 500
-                            ? "Server error. Check database and JWT_SECRET on Vercel."
+                            ? "Server error. Check database and JWT_SECRET in your hosting provider's Environment Variables (Render/Vercel)."
                             : "Invalid credentials")
                 );
                 setLoading(false);
@@ -63,8 +65,8 @@ export default function SignIn() {
                                 <span className="text-[#00C9A7]">X</span>
                             </span>
                         </Link>
-                        <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
-                        <p className="text-sm text-gray-500 mt-2">Access your hospital portal</p>
+                        <h2 className="text-2xl font-bold text-gray-900">Staff Sign In</h2>
+                        <p className="text-sm text-gray-500 mt-2">Hospital staff and admin portal</p>
                     </div>
 
                     {error && (
@@ -121,9 +123,15 @@ export default function SignIn() {
                     </form>
 
                     <p className="mt-8 text-center text-sm text-gray-600">
-                        New to ClinX?{" "}
+                        New staff member?{" "}
                         <Link href="/auth/signup" className="text-teal-600 font-semibold hover:text-teal-700 hover:underline transition-colors">
                             Create Account
+                        </Link>
+                    </p>
+                    <p className="mt-4 text-center text-sm text-gray-400">
+                        Looking to book an appointment?{" "}
+                        <Link href="/patient/signin" className="text-teal-600 font-medium hover:underline">
+                            Patient Sign In
                         </Link>
                     </p>
                 </div>

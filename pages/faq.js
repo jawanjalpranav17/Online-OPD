@@ -5,6 +5,18 @@ import Head from 'next/head';
 
 const FAQPage = () => {
   const [openIndex, setOpenIndex] = useState(null);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', message: '' });
+  const [contactSent, setContactSent] = useState(false);
+
+  const handleContactSubmit = (e) => {
+    e.preventDefault();
+    const subject = encodeURIComponent(`ClinX Inquiry from ${contactForm.name}`);
+    const body = encodeURIComponent(`Name: ${contactForm.name}\nEmail: ${contactForm.email}\nPhone: ${contactForm.phone}\n\n${contactForm.message}`);
+    window.location.href = `mailto:support@clinx.com?subject=${subject}&body=${body}`;
+    setContactSent(true);
+    setContactForm({ name: '', email: '', phone: '', message: '' });
+    setTimeout(() => setContactSent(false), 6000);
+  };
 
   const faqs = [
     {
@@ -90,12 +102,20 @@ const FAQPage = () => {
             <div className="flex justify-center">
               <div className="w-full max-w-2xl px-4">
                 <div className="p-8 bg-gradient-to-br from-neutral-50 to-white rounded-2xl shadow-xl border border-neutral-100">
-                  <form className="space-y-6">
+                  {contactSent && (
+                    <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                      <p className="text-emerald-700 font-medium">Message sent! Your email client has been opened. We'll get back to you shortly.</p>
+                    </div>
+                  )}
+                  <form onSubmit={handleContactSubmit} className="space-y-6">
                     <div>
                       <input 
                         type="text" 
                         placeholder="What's Your Name" 
                         className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        value={contactForm.name}
+                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
@@ -103,6 +123,9 @@ const FAQPage = () => {
                         type="email" 
                         placeholder="Your email address here" 
                         className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        value={contactForm.email}
+                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
@@ -110,6 +133,9 @@ const FAQPage = () => {
                         type="text" 
                         placeholder="Mobile Number" 
                         className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                        value={contactForm.phone}
+                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                        required
                       />
                     </div>
                     <div>
@@ -117,6 +143,9 @@ const FAQPage = () => {
                         rows="4" 
                         placeholder="Write your message here" 
                         className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+                        value={contactForm.message}
+                        onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                        required
                       ></textarea>
                     </div>
                     <button 

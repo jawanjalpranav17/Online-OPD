@@ -1,6 +1,20 @@
+import { useState } from 'react';
 import Link from 'next/link';
 
 export default function Hero() {
+  const [demoEmail, setDemoEmail] = useState('');
+  const [demoSent, setDemoSent] = useState(false);
+
+  const handleBookDemo = (e) => {
+    e.preventDefault();
+    if (!demoEmail) return;
+    const subject = encodeURIComponent('ClinX Demo Request');
+    const body = encodeURIComponent(`Hi ClinX team, I'd like to book a demo. Email: ${demoEmail}`);
+    window.location.href = `mailto:support@clinx.com?subject=${subject}&body=${body}`;
+    setDemoSent(true);
+    setDemoEmail('');
+    setTimeout(() => setDemoSent(false), 6000);
+  };
   return (
     <section id="hero" className="relative bg-white py-12 lg:py-20 overflow-hidden">
       <div className="absolute top-0 right-0 h-full w-[45%] lg:w-[42%] bg-[#E0F7F3] rounded-l-[150px] z-0 hidden lg:block"></div>
@@ -20,18 +34,26 @@ export default function Hero() {
               <div className="flex flex-wrap items-center gap-3 mt-4 mb-6">
                 <Link
                   className="inline-flex items-center justify-center px-6 py-3 bg-[#00C9A7] hover:bg-[#00B596] text-white text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg whitespace-nowrap min-w-[160px]"
+                  href="/patient/signup"
+                >
+                  Book Appointment &rarr;
+                </Link>
+                <Link
+                  className="inline-flex items-center justify-center px-6 py-3 border-2 border-[#00C9A7] text-[#00C9A7] hover:bg-teal-50 text-sm font-bold rounded-lg transition-all whitespace-nowrap"
                   href="/auth/signup"
                 >
-                  Start Free OPD, EMR &rarr;
+                  Start Free OPD, EMR
                 </Link>
                 <div className="w-full max-w-[480px]">
                   <div className="w-full max-w-2xl mx-auto">
-                    <form className="flex flex-col gap-4 sm:flex-row sm:gap-2 w-full">
+                    <form onSubmit={handleBookDemo} className="flex flex-col gap-4 sm:flex-row sm:gap-2 w-full">
                       <input
                         type="text"
                         placeholder="Enter your email"
                         name="register"
                         className="flex-grow p-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                        value={demoEmail}
+                        onChange={(e) => setDemoEmail(e.target.value)}
                         required
                       />
                       <button
@@ -41,6 +63,9 @@ export default function Hero() {
                         Book demo
                       </button>
                     </form>
+                    {demoSent && (
+                      <p className="text-xs text-emerald-600 font-medium mt-2">Thanks! Your email client has been opened to send the demo request.</p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -24,6 +24,16 @@ export default function DashboardLayout({ children, title }) {
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
+        axios.get("/api/auth/me")
+            .then((res) => {
+                if (res.data.role === "patient") {
+                    router.replace("/patient/dashboard");
+                }
+            })
+            .catch(() => {});
+    }, [router]);
+
+    useEffect(() => {
         const handleResize = () => {
             if (window.innerWidth < 1024) {
                 setSidebarOpen(false);
@@ -123,10 +133,18 @@ export default function DashboardLayout({ children, title }) {
                     </div>
 
                     <div className="flex items-center space-x-4">
-                        <button className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all transform hover:rotate-12">
+                        <button
+                            onClick={() => router.push("/dashboards/cms")}
+                            className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all transform hover:rotate-12"
+                            title="Notices & announcements"
+                        >
                             <Bell className="w-5 h-5" />
                         </button>
-                        <button className="h-10 w-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold border border-teal-200 hover:shadow-md hover:border-teal-400 transition-all transform hover:scale-110 active:scale-90">
+                        <button
+                            onClick={() => router.push("/admin-dashboard")}
+                            className="h-10 w-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold border border-teal-200 hover:shadow-md hover:border-teal-400 transition-all transform hover:scale-110 active:scale-90"
+                            title="Account overview"
+                        >
                             <User className="w-5 h-5" />
                         </button>
                     </div>

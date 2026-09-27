@@ -45,7 +45,7 @@ export default function SignUp() {
                 setError(
                     data.message ||
                         (response.status >= 500
-                            ? "Server error. Check that MONGO_URI (or MONGODB_URI) is set on Vercel."
+                            ? "Server error. Check that MONGO_URI (or MONGODB_URI) is set in your hosting provider's Environment Variables (Render/Vercel)."
                             : "Registration failed")
                 );
                 setLoading(false);

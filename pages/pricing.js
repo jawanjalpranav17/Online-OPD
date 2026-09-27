@@ -1,8 +1,17 @@
 import Head from "next/head";
+import Link from "next/link";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/Footer";
 
 export default function Pricing() {
+  const handleBookDemo = (e) => {
+    e.preventDefault();
+    const input = e.target.querySelector('input');
+    const value = input?.value || '';
+    const subject = encodeURIComponent('ClinX Demo Request');
+    const body = encodeURIComponent(`Hi ClinX team, I'd like to book a demo. Contact: ${value}`);
+    window.location.href = `mailto:support@clinx.com?subject=${subject}&body=${body}`;
+  };
   return (
     <>
       <Head>
@@ -28,12 +37,15 @@ export default function Pricing() {
               No hidden fees. No surprises. Cancel anytime.
             </p>
             <div className="mb-6">
-              <button className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white text-lg font-semibold rounded-lg hover:shadow-2xl transition-all transform hover:scale-105">
+              <Link
+                href="/auth/signup"
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white text-lg font-semibold rounded-lg hover:shadow-2xl transition-all transform hover:scale-105"
+              >
                 Start Free OPD, EMR
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5 ml-2">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                 </svg>
-              </button>
+              </Link>
             </div>
             <div className="max-w-2xl mx-auto p-4 bg-green-50 rounded-xl border border-green-200">
               <p className="text-base font-bold text-green-800">
@@ -190,7 +202,7 @@ export default function Pricing() {
                 </p>
               </div>
               <div className="max-w-2xl mx-auto">
-                <form className="flex flex-col gap-4 sm:flex-row sm:gap-2 w-full">
+                <form onSubmit={handleBookDemo} className="flex flex-col gap-4 sm:flex-row sm:gap-2 w-full">
                   <input type="text" placeholder="Enter your email or mobile number" className="flex-grow p-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" required />
                   <button type="submit" className="flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
                     Book demo <i className="fa fa-arrow-right ml-2"></i>
