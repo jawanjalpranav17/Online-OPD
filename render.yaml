@@ -10,6 +10,8 @@ services:
     healthCheckPath: /
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: 24.21.0
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
